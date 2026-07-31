@@ -373,6 +373,7 @@ async function spin(){
   }
 
   const winner = serverResult.nombre;
+  resultMeta.textContent = '';
   const n = names.length;
   const seg = 360/n;
   const targetIndex = Math.max(0, names.indexOf(winner));
