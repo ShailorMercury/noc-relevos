@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,8 +26,9 @@
 
 <div class="topbar" id="topbarOuter" style="display:none;">
   <div class="topbar-inner">
-    <div class="topbar-user">👤 <span id="topbarUser">—</span></div>
-    <button class="btn-sm" id="logoutBtn">Cerrar sesión</button>
+    <div class="topbar-user">👤 <span id="topbarUser">—</span> <span id="adminBadge" class="admin-badge" style="display:none;">admin</span></div>
+    <div class="topbar-title">NOC-RELEVOS RANDOMIZADOR</div>
+    <div class="topbar-actions"><button class="btn-sm" id="logoutBtn">Cerrar sesión</button></div>
   </div>
 </div>
 
@@ -100,6 +102,10 @@
     </div>
 
   </div>
+</div>
+
+<div class="footerbar" id="footerbarOuter" style="display:none;">
+  <div class="footerbar-inner">NOC-Relevos Randomizador · <span id="footerVersion">v2.0</span></div>
 </div>
 
 <script src="script.js"></script>
