@@ -465,6 +465,10 @@ function startApp(){
   if(adminActions){
     adminActions.style.display = (currentUser.toLowerCase() === ADMIN_USER) ? 'flex' : 'none';
   }
+
+  const topbarUser = document.getElementById('topbarUser');
+  if(topbarUser) topbarUser.textContent = currentUser || '—';
+
   initLogSupport();
   loadState();
   buildNameInputs();
@@ -526,3 +530,9 @@ if(checkSavedLogin()){
 } else {
   document.getElementById('loginOverlay').style.display = 'flex';
 }
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  if(!confirm('¿Cerrar sesión?')) return;
+  localStorage.removeItem(LOGIN_KEY);
+  location.reload();
+});
