@@ -1,4 +1,3 @@
-const FALLBACK_NAMES = ["Marta","Sandra","Jorge","Pedro","Ángel P.","Ángel T.","Francisco","Victor","Azeddine","Santiago","Bryan","Josue"];
 const STORAGE_KEY = "noc-ruleta-relevos-v1";
 let FIXED_NAMES = [];
 let NAME_COLORS = {};
@@ -27,9 +26,9 @@ async function loadTeamFromServer(){
     const names = await res.json();
     if(Array.isArray(names) && names.length > 0) return names;
   }catch(err){
-    console.warn('No se pudo cargar el equipo desde el servidor, usando lista de respaldo', err);
+    console.warn('No se pudo cargar el equipo desde el servidor', err);
   }
-  return FALLBACK_NAMES;
+  return [];
 }
 
 let audioCtx = null;
@@ -391,6 +390,30 @@ function renderSummary(){
 }
 
 
+document.getElementById('sheetBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('sheetBtn');
+  btn.disabled = true;
+  btn.textContent = 'Comprobando...';
+  try{
+    const res = await fetch(LOG_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action: 'getSheetUrl', usuario: currentUsuarioFull, token: currentToken})
+    });
+    const data = await res.json();
+    if(data.status === 'ok' && data.url){
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert(data.message || 'No se pudo obtener el enlace');
+    }
+  }catch(err){
+    alert('No se pudo conectar con el servidor');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '📊 Abrir base de datos';
+  }
+});
+
 document.getElementById('resetBtn').addEventListener('click', async () => {
   if(!confirm('¿Seguro? Esto borra el historial COMPARTIDO para todo el equipo, en el Sheet real. No se puede deshacer.')) return;
   const btn = document.getElementById('resetBtn');
@@ -485,6 +508,14 @@ async function startApp(){
   NAME_COLORS = generateNameColors(FIXED_NAMES);
   CONFETTI_COLORS = Object.values(NAME_COLORS);
   selected = new Set(FIXED_NAMES);
+
+  if(FIXED_NAMES.length === 0){
+    resultLabel.textContent = 'error';
+    resultName.textContent = '⚠️';
+    resultName.style.color = 'var(--red)';
+    resultMeta.textContent = 'No se pudo cargar el equipo. Recarga la página.';
+    spinBtn.disabled = true;
+  }
 
   initLogSupport();
   loadState();
