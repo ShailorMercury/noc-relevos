@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Ruleta de Relevos // NOC</title>
+<title>NOC-RELEVOS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -28,7 +28,7 @@
   <div class="topbar-inner">
     <div class="topbar-user">👤 <span id="topbarUser">—</span> <span id="adminBadge" class="admin-badge" style="display:none;">admin</span></div>
     <div class="topbar-title">NOC-RELEVOS RANDOMIZADOR</div>
-    <div class="topbar-actions"><button class="btn-green" id="logoutBtn">Cerrar sesión</button></div>
+    <div class="topbar-actions"><button class="btn-green" id="logoutBtn">🚪Cerrar sesión</button></div>
   </div>
 </div>
 
@@ -40,11 +40,10 @@
       <div class="wheel-stage">
         <div class="wheel-core">
           <div class="pointer"></div>
-          <div class="wheel-ring"></div>
+          <div class="wheel-ring" id="wheelRing"></div>
           <svg id="wheel" viewBox="0 0 300 300"></svg>
           <div class="hub">
             <div class="clock" id="clock">00:00</div>
-            <div class="lbl">LOCAL</div>
           </div>
         </div>
       </div>
@@ -56,7 +55,7 @@
         <div class="result-card" id="resultCard">
           <div class="result-label" id="resultLabel">da el relevo</div>
           <div class="result-name" id="resultName">—</div>
-          <div class="result-meta" id="resultMeta">esperando giro...</div>
+          <div class="result-meta" id="resultMeta"> </div>
         </div>
       </div>
     </div>
@@ -89,6 +88,7 @@
             </table>
           </div>
           <div class="actions" id="adminActions" style="margin-top:16px;display:none;">
+            <button class="btn-green" id="sheetBtn">📊 BBDD</button>
             <button class="btn-green" id="resetBtn">⟲ borrar historial (todo el equipo)</button>
           </div>
         </div>
@@ -99,7 +99,7 @@
 </div>
 
 <div class="footerbar" id="footerbarOuter" style="display:none;">
-  <div class="footerbar-inner">Tu herramienta para cuando el resto se queda en 🤫 · <span id="footerVersion">v2.3</span></div>
+  <div class="footerbar-inner">Tu herramienta ⭐ para cuando el resto se queda en 🤫 · <span id="footerVersion">v2.6</span></div>
 </div>
 
 <script src="script.js"></script>
