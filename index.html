@@ -64,13 +64,13 @@
       <div class="panel">
         <h2>Equipo <span id="teamCount">11 en turno</span></h2>
         <div class="person-grid" id="namesGrid"></div>
-        <p class="footnote" id="selectWarning" style="display:none;color:var(--red);">Selecciona al menos 2 personas para poder girar.</p>
       </div>
 
       <div class="panel">
         <div class="tabs">
           <button class="tab-btn active" data-tab="resumen">Resumen</button>
-          <button class="tab-btn" data-tab="historial">Historial</button>
+          <button class="tab-btn" data-tab="misgiros">Mis giros</button>
+          <button class="tab-btn" data-tab="todos">Todos los giros</button>
           <span class="tab-indicator" id="tabIndicator"></span>
         </div>
 
@@ -78,7 +78,18 @@
           <div id="summaryBars"></div>
         </div>
 
-        <div class="tab-panel" id="tabHistorial">
+        <div class="tab-panel" id="tabMisgiros">
+          <div class="hist-wrap">
+            <table>
+              <thead><tr><th style="width:32%">Fecha</th><th style="width:20%">Turno</th><th>Relevo</th></tr></thead>
+              <tbody id="misGirosBody">
+                <tr class="empty-row"><td colspan="3">Aún no has girado</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tabTodos">
           <div class="hist-wrap">
             <table>
               <thead><tr><th style="width:26%">Fecha</th><th style="width:15%">Turno</th><th>Relevo</th><th style="width:18%">Girado por</th></tr></thead>
@@ -89,7 +100,7 @@
           </div>
           <div class="actions" id="adminActions" style="margin-top:16px;display:none;">
             <button class="btn-green" id="sheetBtn">📊 BBDD</button>
-            <button class="btn-green" id="resetBtn">⟲ borrar historial (todo el equipo)</button>
+            <button class="btn-green" id="resetBtn">🚮 Limpiar historial</button>
           </div>
         </div>
       </div>
