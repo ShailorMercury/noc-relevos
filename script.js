@@ -179,6 +179,7 @@ function buildNameInputs(){
       updateTeamState();
       renderWheel();
       saveState();
+      schedulePrepareSpin();
     });
     namesGrid.appendChild(btn);
   });
@@ -277,47 +278,95 @@ function getCurrentRotationDeg(el){
   return angle;
 }
 
+let pendingResult = null;
+let pendingSig = null;
+let prepareDebounceTimer = null;
+
+function signatureOf(names){
+  return names.slice().sort().join(',');
+}
+
+function schedulePrepareSpin(){
+  pendingResult = null;
+  pendingSig = null;
+  clearTimeout(prepareDebounceTimer);
+  const names = activeNames();
+  if(names.length < 2) return;
+  prepareDebounceTimer = setTimeout(() => doPrepareSpin(names), 500);
+}
+
+async function doPrepareSpin(names){
+  const sig = signatureOf(names);
+  try{
+    const res = await fetch(LOG_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action: 'prepareSpin', usuario: currentUsuarioFull, token: currentToken, activeNames: names})
+    });
+    const data = await res.json();
+    // si la selección ha cambiado mientras esperábamos, esta respuesta ya no vale
+    if(sig !== signatureOf(activeNames())) return;
+    if(data.status === 'ok'){
+      pendingResult = data;
+      pendingSig = sig;
+    }
+  }catch(err){
+    // silencioso: si falla, spin() hará su propio intento al pulsar GIRAR
+  }
+}
+
 async function spin(){
   const names = activeNames();
   if(spinning || names.length < 2) return;
+  const sig = signatureOf(names);
   spinning = true;
   spinBtn.disabled = true;
   resultLabel.textContent = 'da el relevo';
   resultLabel.classList.remove('spinning-label');
   resultName.innerHTML = '<span class="dot-loader"><span></span><span></span><span></span></span>';
-  resultMeta.textContent = 'conectando...';
-  const wheelRing = document.getElementById('wheelRing');
-  if(wheelRing) wheelRing.classList.add('waiting');
-
-  wheel.style.transition = 'none';
-  wheel.style.animation = 'spinLoopFast 0.6s linear infinite';
+  resultMeta.textContent = '';
 
   let serverResult;
-  try{
-    const res = await fetch(LOG_ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain;charset=utf-8'},
-      body: JSON.stringify({action: 'spin', usuario: currentUsuarioFull, token: currentToken, activeNames: names})
-    });
-    serverResult = await res.json();
-  }catch(err){
-    serverResult = {status: 'error', message: 'No se pudo conectar con el servidor'};
+  const usePending = pendingResult && pendingSig === sig;
+
+  if(usePending){
+    // Ya sabíamos el resultado de antemano: arranca el frenado ya mismo, sin espera.
+    serverResult = pendingResult;
+  } else {
+    // No nos dio tiempo a prepararlo (caso raro): pedirlo ahora, con el efecto de espera.
+    resultMeta.textContent = 'conectando...';
+    const wheelRing = document.getElementById('wheelRing');
+    if(wheelRing) wheelRing.classList.add('waiting');
+    wheel.style.transition = 'none';
+    wheel.style.animation = 'spinLoopFast 0.6s linear infinite';
+
+    try{
+      const res = await fetch(LOG_ENDPOINT, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify({action: 'prepareSpin', usuario: currentUsuarioFull, token: currentToken, activeNames: names})
+      });
+      serverResult = await res.json();
+    }catch(err){
+      serverResult = {status: 'error', message: 'No se pudo conectar con el servidor'};
+    }
+
+    if(wheelRing) wheelRing.classList.remove('waiting');
+    const liveAngle = getCurrentRotationDeg(wheel);
+    wheel.style.animation = 'none';
+    wheel.style.transform = `rotate(${liveAngle}deg)`;
+    wheel.offsetHeight; // fuerza el repintado antes de reactivar la transición
+    wheel.style.transition = '';
+    currentRotation = liveAngle;
   }
 
-  if(wheelRing) wheelRing.classList.remove('waiting');
+  pendingResult = null;
+  pendingSig = null;
 
-  // Congelar el giro rápido justo en el ángulo donde iba, sin salto visual
-  const liveAngle = getCurrentRotationDeg(wheel);
-  wheel.style.animation = 'none';
-  wheel.style.transform = `rotate(${liveAngle}deg)`;
-  wheel.offsetHeight; // fuerza el repintado antes de reactivar la transición
-  wheel.style.transition = '';
-  currentRotation = liveAngle;
-
-  if(serverResult.status !== 'ok'){
+  if(!serverResult || serverResult.status !== 'ok'){
     resultName.textContent = '⚠️';
     resultName.style.color = 'var(--red)';
-    resultMeta.textContent = serverResult.message || 'Error al girar';
+    resultMeta.textContent = (serverResult && serverResult.message) || 'Error al girar';
     spinning = false;
     updateTeamState();
     return;
@@ -340,6 +389,9 @@ async function spin(){
   wheel.style.transform = `rotate(${currentRotation}deg)`;
   scheduleSpinTicks(totalDelta, seg, 5500);
 
+  // Confirmar (y escribir de verdad en el Sheet) en paralelo, sin bloquear la animación.
+  commitSpinInBackground();
+
   setTimeout(() => {
     const fecha = serverResult.fecha;
     const turno = serverResult.turno;
@@ -357,6 +409,22 @@ async function spin(){
     spinning = false;
     updateTeamState();
   }, 5600);
+}
+
+async function commitSpinInBackground(){
+  try{
+    const res = await fetch(LOG_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action: 'commitSpin', usuario: currentUsuarioFull, token: currentToken})
+    });
+    const data = await res.json();
+    if(data.status !== 'ok'){
+      console.warn('No se pudo confirmar el giro en el servidor:', data.message);
+    }
+  }catch(err){
+    console.warn('No se pudo confirmar el giro en el servidor', err);
+  }
 }
 
 function escapeHtml(str){
@@ -507,7 +575,7 @@ async function startApp(){
   FIXED_NAMES = await loadTeamFromServer();
   NAME_COLORS = generateNameColors(FIXED_NAMES);
   CONFETTI_COLORS = Object.values(NAME_COLORS);
-  selected = new Set(FIXED_NAMES);
+  selected = new Set();
 
   if(FIXED_NAMES.length === 0){
     resultLabel.textContent = 'error';
@@ -523,6 +591,7 @@ async function startApp(){
   renderWheel();
   renderHistory();
   renderSummary();
+  schedulePrepareSpin();
 }
 
 const LOGIN_KEY = 'noc-ruleta-login-v1';
