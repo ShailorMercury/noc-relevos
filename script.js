@@ -108,7 +108,6 @@ const resultCard = document.getElementById('resultCard');
 const histBody = document.getElementById('histBody');
 const summaryBars = document.getElementById('summaryBars');
 const teamCount = document.getElementById('teamCount');
-const selectWarning = document.getElementById('selectWarning');
 
 // 👇 Pega aquí la URL que copiaste al desplegar el Apps Script (termina en /exec)
 const LOG_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxh04qQdkC4AipzeAKTNdF0Gn8rDJZHuG7ihjZtggJJDIWgxUPbVw5Jdi22ErmrsbuuHg/exec';
@@ -126,6 +125,7 @@ async function fetchSharedHistory(){
     if(Array.isArray(rows) && rows.length > 0){
       history = rows;
       renderHistory();
+      renderMisGiros();
       renderSummary();
       saveState();
     }
@@ -184,10 +184,15 @@ function buildNameInputs(){
 
 function updateTeamState(){
   const n = activeNames().length;
-  teamCount.textContent = n + ' en turno';
   const canSpin = n >= 2;
   spinBtn.disabled = !canSpin || spinning;
-  selectWarning.style.display = canSpin ? 'none' : 'block';
+  if(canSpin){
+    teamCount.textContent = n + ' en turno';
+    teamCount.classList.remove('warning');
+  } else {
+    teamCount.textContent = 'mínimo 2 para girar';
+    teamCount.classList.add('warning');
+  }
 }
 
 function renderWheel(){
@@ -394,6 +399,7 @@ async function spin(){
     const turno = serverResult.turno;
     history.unshift({fecha, nombre: winner, turno, giradoPor: currentUser});
     renderHistory();
+    renderMisGiros();
     renderSummary();
     saveState();
     resultLabel.textContent = 'da el relevo';
@@ -438,6 +444,21 @@ function renderHistory(){
   histBody.innerHTML = history.map(h => `<tr><td>${escapeHtml(h.fecha)}</td><td>${escapeHtml(h.turno || '-')}</td><td>${escapeHtml(h.nombre)}</td><td>${escapeHtml(h.giradoPor || '-')}</td></tr>`).join('');
 }
 
+function renderMisGiros(){
+  const misGirosBody = document.getElementById('misGirosBody');
+  if(!misGirosBody) return;
+  const mios = history.filter(h => (h.giradoPor || '').toLowerCase() === currentUser.toLowerCase());
+  if(mios.length === 0){
+    misGirosBody.innerHTML = '<tr class="empty-row"><td colspan="3">Aún no has girado</td></tr>';
+    return;
+  }
+  misGirosBody.innerHTML = mios.map(h => `<tr><td>${escapeHtml(h.fecha)}</td><td>${escapeHtml(h.turno || '-')}</td><td>${escapeHtml(h.nombre)}</td></tr>`).join('');
+}
+
+function normalizeForUsername(str){
+  return str.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s.]/g, '');
+}
+
 function renderSummary(){
   const counts = {};
   FIXED_NAMES.forEach(n2 => counts[n2] = 0);
@@ -446,8 +467,9 @@ function renderSummary(){
   summaryBars.innerHTML = FIXED_NAMES.map(n2 => {
     const c = counts[n2] || 0;
     const pct = Math.round((c/max)*100);
-    return `<div class="bar-row">
-      <div class="bar-name">${escapeHtml(n2)}</div>
+    const isMe = normalizeForUsername(n2) === currentUser.toLowerCase();
+    return `<div class="bar-row${isMe ? ' bar-row-me' : ''}">
+      <div class="bar-name">${isMe ? '⭐ ' : ''}${escapeHtml(n2)}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
       <div class="bar-count">${c}</div>
     </div>`;
@@ -495,6 +517,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
     if(data.status === 'ok'){
       history = [];
       renderHistory();
+      renderMisGiros();
       renderSummary();
       saveState();
       resultLabel.textContent = 'da el relevo';
@@ -587,6 +610,7 @@ async function startApp(){
   buildNameInputs();
   renderWheel();
   renderHistory();
+  renderMisGiros();
   renderSummary();
   schedulePrepareSpin();
 }
