@@ -143,7 +143,6 @@ function activeNames(){
 function saveState(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      selected: activeNames(),
       history: history
     }));
   }catch(err){
@@ -156,9 +155,6 @@ function loadState(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return;
     const data = JSON.parse(raw);
-    if(Array.isArray(data.selected) && data.selected.length > 0){
-      selected = new Set(data.selected.filter(n => FIXED_NAMES.includes(n)));
-    }
     if(Array.isArray(data.history)) history = data.history;
   }catch(err){
     console.warn('No se pudo leer localStorage', err);
