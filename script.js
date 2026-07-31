@@ -127,13 +127,13 @@ async function fetchSharedHistory(){
   }
 }
 
-function sendToLogServer(fecha, nombre, turno){
+function sendToLogServer(fecha, nombre, turno, giradoPor){
   if(!LOG_ENDPOINT || LOG_ENDPOINT.indexOf('PEGA_AQUI') !== -1) return;
   fetch(LOG_ENDPOINT, {
     method: 'POST',
     mode: 'no-cors',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({fecha, nombre, turno})
+    body: JSON.stringify({fecha, nombre, turno, giradoPor})
   }).catch(() => {});
 }
 
@@ -316,11 +316,11 @@ function spin(){
     const now = new Date();
     const fecha = now.toLocaleDateString('es-ES') + ' ' + now.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
     const turno = getTurno(now);
-    history.unshift({fecha, nombre: winner, turno});
+    history.unshift({fecha, nombre: winner, turno, giradoPor: currentUser});
     renderHistory();
     renderSummary();
     saveState();
-    sendToLogServer(fecha, winner, turno);
+    sendToLogServer(fecha, winner, turno, currentUser);
     resultLabel.textContent = 'da el relevo';
     resultLabel.classList.remove('spinning-label');
     resultName.textContent = winner;
@@ -341,10 +341,10 @@ function escapeHtml(str){
 
 function renderHistory(){
   if(history.length === 0){
-    histBody.innerHTML = '<tr class="empty-row"><td colspan="3">Aún no hay giros registrados</td></tr>';
+    histBody.innerHTML = '<tr class="empty-row"><td colspan="4">Aún no hay giros registrados</td></tr>';
     return;
   }
-  histBody.innerHTML = history.map(h => `<tr><td>${escapeHtml(h.fecha)}</td><td>${escapeHtml(h.turno || '-')}</td><td>${escapeHtml(h.nombre)}</td></tr>`).join('');
+  histBody.innerHTML = history.map(h => `<tr><td>${escapeHtml(h.fecha)}</td><td>${escapeHtml(h.turno || '-')}</td><td>${escapeHtml(h.nombre)}</td><td>${escapeHtml(h.giradoPor || '-')}</td></tr>`).join('');
 }
 
 function renderSummary(){
@@ -442,9 +442,18 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 const initialActiveTab = document.querySelector('.tab-btn.active');
 if(initialActiveTab) moveTabIndicator(initialActiveTab);
 
+let currentUser = '';
+
 function startApp(){
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('appWrap').style.display = 'block';
+  try{
+    const raw = localStorage.getItem(LOGIN_KEY);
+    if(raw){
+      const data = JSON.parse(raw);
+      currentUser = data.nombre || data.usuario || '';
+    }
+  }catch(err){}
   initLogSupport();
   loadState();
   buildNameInputs();
