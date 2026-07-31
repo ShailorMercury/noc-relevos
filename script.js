@@ -363,59 +363,39 @@ function renderSummary(){
   }).join('');
 }
 
-document.getElementById('exportBtn').addEventListener('click', () => {
-  const data = JSON.stringify({selected: activeNames(), history}, null, 2);
-  const blob = new Blob([data], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'ruleta_relevos_copia.json';
-  a.click();
-  URL.revokeObjectURL(url);
-});
 
-document.getElementById('importBtn').addEventListener('click', () => {
-  document.getElementById('fileInput').click();
-});
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if(!confirm('¿Seguro? Esto borra el historial COMPARTIDO para todo el equipo, en el Sheet real. No se puede deshacer.')) return;
+  const btn = document.getElementById('resetBtn');
+  btn.disabled = true;
+  btn.textContent = 'Borrando...';
 
-document.getElementById('fileInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try{
-      const data = JSON.parse(ev.target.result);
-      if(Array.isArray(data.selected)){
-        selected = new Set(data.selected.filter(n => FIXED_NAMES.includes(n)));
-      }
-      if(Array.isArray(data.history)) history = data.history;
-      buildNameInputs();
-      renderWheel();
+  try{
+    const res = await fetch(LOG_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action: 'clearHistorial', usuario: currentUsuarioFull, token: currentToken})
+    });
+    const data = await res.json();
+    if(data.status === 'ok'){
+      history = [];
       renderHistory();
       renderSummary();
       saveState();
-      resultMeta.textContent = 'copia importada correctamente';
-    }catch(err){
-      resultMeta.textContent = 'error: el archivo no es un JSON válido';
+      resultLabel.textContent = 'da el relevo';
+      resultLabel.classList.remove('spinning-label');
+      resultName.textContent = '—';
+      resultName.style.color = 'var(--text-mute)';
+      resultMeta.textContent = 'historial borrado para todos';
+    } else {
+      alert(data.message || 'No se pudo borrar el historial');
     }
-  };
-  reader.readAsText(file);
-});
-
-document.getElementById('resetBtn').addEventListener('click', () => {
-  if(!confirm('¿Seguro? Esto borra el historial guardado en este navegador.')) return;
-  history = [];
-  selected = new Set(FIXED_NAMES);
-  buildNameInputs();
-  renderWheel();
-  renderHistory();
-  renderSummary();
-  saveState();
-  resultLabel.textContent = 'da el relevo';
-  resultLabel.classList.remove('spinning-label');
-  resultName.textContent = '—';
-  resultName.style.color = 'var(--text-mute)';
-  resultMeta.textContent = 'esperando giro...';
+  }catch(err){
+    alert('No se pudo conectar con el servidor');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '⟲ borrar historial (todo el equipo)';
+  }
 });
 
 spinBtn.addEventListener('click', spin);
