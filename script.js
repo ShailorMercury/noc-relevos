@@ -451,6 +451,7 @@ let currentToken = '';
 function startApp(){
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('appWrap').style.display = 'block';
+  document.getElementById('topbarOuter').style.display = 'block';
   try{
     const raw = localStorage.getItem(LOGIN_KEY);
     if(raw){
