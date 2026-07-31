@@ -266,6 +266,18 @@ function fireConfetti(container){
   }
 }
 
+function getCurrentRotationDeg(el){
+  const style = window.getComputedStyle(el);
+  const transform = style.transform;
+  if(transform === 'none') return 0;
+  const match = transform.match(/matrix\(([^)]+)\)/);
+  if(!match) return 0;
+  const parts = match[1].split(',').map(Number);
+  let angle = Math.round(Math.atan2(parts[1], parts[0]) * (180/Math.PI));
+  if(angle < 0) angle += 360;
+  return angle;
+}
+
 async function spin(){
   const names = activeNames();
   if(spinning || names.length < 2) return;
@@ -275,6 +287,11 @@ async function spin(){
   resultLabel.classList.remove('spinning-label');
   resultName.innerHTML = '<span class="dot-loader"><span></span><span></span><span></span></span>';
   resultMeta.textContent = 'conectando...';
+  const wheelRing = document.getElementById('wheelRing');
+  if(wheelRing) wheelRing.classList.add('waiting');
+
+  wheel.style.transition = 'none';
+  wheel.style.animation = 'spinLoopFast 0.6s linear infinite';
 
   let serverResult;
   try{
@@ -287,6 +304,16 @@ async function spin(){
   }catch(err){
     serverResult = {status: 'error', message: 'No se pudo conectar con el servidor'};
   }
+
+  if(wheelRing) wheelRing.classList.remove('waiting');
+
+  // Congelar el giro rápido justo en el ángulo donde iba, sin salto visual
+  const liveAngle = getCurrentRotationDeg(wheel);
+  wheel.style.animation = 'none';
+  wheel.style.transform = `rotate(${liveAngle}deg)`;
+  wheel.offsetHeight; // fuerza el repintado antes de reactivar la transición
+  wheel.style.transition = '';
+  currentRotation = liveAngle;
 
   if(serverResult.status !== 'ok'){
     resultName.textContent = '⚠️';
