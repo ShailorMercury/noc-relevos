@@ -137,7 +137,7 @@ function sendToLogServer(fecha, nombre, turno){
   }).catch(() => {});
 }
 
-initLogSupport();
+// initLogSupport() se llama ahora dentro de startApp(), tras el login
 
 function activeNames(){
   return FIXED_NAMES.filter(n => selected.has(n));
@@ -442,8 +442,67 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 const initialActiveTab = document.querySelector('.tab-btn.active');
 if(initialActiveTab) moveTabIndicator(initialActiveTab);
 
-loadState();
-buildNameInputs();
-renderWheel();
-renderHistory();
-renderSummary();
+function startApp(){
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'block';
+  initLogSupport();
+  loadState();
+  buildNameInputs();
+  renderWheel();
+  renderHistory();
+  renderSummary();
+}
+
+const LOGIN_KEY = 'noc-ruleta-login-v1';
+
+function checkSavedLogin(){
+  try{
+    const raw = localStorage.getItem(LOGIN_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    return !!(data && data.usuario);
+  }catch(err){
+    return false;
+  }
+}
+
+const loginForm = document.getElementById('loginForm');
+const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+
+loginForm.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const usuario = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  if(!usuario || !password) return;
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Entrando...';
+  loginError.textContent = '';
+
+  try{
+    const res = await fetch(LOG_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action: 'login', usuario, password})
+    });
+    const data = await res.json();
+    if(data.status === 'ok'){
+      localStorage.setItem(LOGIN_KEY, JSON.stringify({usuario, nombre: data.nombre}));
+      startApp();
+    } else {
+      loginError.textContent = data.message || 'Usuario o contraseña incorrectos';
+    }
+  }catch(err){
+    loginError.textContent = 'No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.';
+  }finally{
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Entrar';
+  }
+});
+
+if(checkSavedLogin()){
+  startApp();
+} else {
+  document.getElementById('loginOverlay').style.display = 'flex';
+}
