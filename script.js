@@ -1,19 +1,7 @@
-const FIXED_NAMES = ["Marta","Sandra","Jorge","Pedro","Ángel P.","Ángel T.","Francisco","Victor","Azeddine","Santiago","Bryan","Josue"];
+const FALLBACK_NAMES = ["Marta","Sandra","Jorge","Pedro","Ángel P.","Ángel T.","Francisco","Victor","Azeddine","Santiago","Bryan","Josue"];
 const STORAGE_KEY = "noc-ruleta-relevos-v1";
-const NAME_COLORS = {
-  "Marta": "#EFB7B7",
-  "Sandra": "#EFD3B7",
-  "Jorge": "#EFEFB7",
-  "Pedro": "#D3EFB7",
-  "Ángel P.": "#B7EFB7",
-  "Ángel T.": "#B7EFD3",
-  "Francisco": "#B7EFEF",
-  "Victor": "#B7D3EF",
-  "Azeddine": "#B7B7EF",
-  "Santiago": "#D3B7EF",
-  "Bryan": "#EFB7EF",
-  "Josue": "#EFB7D3"
-};
+let FIXED_NAMES = [];
+let NAME_COLORS = {};
 const WHEEL_TEXT_COLOR = "#20263F";
 const TURNO_COLORS = {
   "Mañana": "#B7D3EF",
@@ -22,6 +10,27 @@ const TURNO_COLORS = {
 };
 const R_OUTER = 145;
 const R_LABEL = 95;
+
+function generateNameColors(names){
+  const n = names.length || 1;
+  const colors = {};
+  names.forEach((name, i) => {
+    const hue = Math.round((360 * i) / n);
+    colors[name] = `hsl(${hue}, 65%, 83%)`;
+  });
+  return colors;
+}
+
+async function loadTeamFromServer(){
+  try{
+    const res = await fetch(LOG_ENDPOINT + (LOG_ENDPOINT.includes('?') ? '&' : '?') + 'action=team');
+    const names = await res.json();
+    if(Array.isArray(names) && names.length > 0) return names;
+  }catch(err){
+    console.warn('No se pudo cargar el equipo desde el servidor, usando lista de respaldo', err);
+  }
+  return FALLBACK_NAMES;
+}
 
 let audioCtx = null;
 function getAudioCtx(){
@@ -85,7 +94,7 @@ function scheduleSpinTicks(totalDelta, segAngle, durationMs){
   }
 }
 
-let selected = new Set(FIXED_NAMES);
+let selected = new Set();
 let history = [];
 let spinning = false;
 let currentRotation = 0;
@@ -232,7 +241,7 @@ function tickClock(){
 setInterval(tickClock, 1000);
 tickClock();
 
-const CONFETTI_COLORS = Object.values(NAME_COLORS);
+let CONFETTI_COLORS = [];
 
 function fireConfetti(container){
   const count = 26;
@@ -437,7 +446,7 @@ let currentUser = '';
 let currentUsuarioFull = '';
 let currentToken = '';
 
-function startApp(){
+async function startApp(){
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('appWrap').style.display = 'block';
   document.getElementById('topbarOuter').style.display = 'block';
@@ -452,12 +461,23 @@ function startApp(){
   }catch(err){}
 
   const adminActions = document.getElementById('adminActions');
+  const isAdmin = currentUser.toLowerCase() === ADMIN_USER;
   if(adminActions){
-    adminActions.style.display = (currentUser.toLowerCase() === ADMIN_USER) ? 'flex' : 'none';
+    adminActions.style.display = isAdmin ? 'flex' : 'none';
   }
+
+  const adminBadge = document.getElementById('adminBadge');
+  if(adminBadge) adminBadge.style.display = isAdmin ? 'inline-block' : 'none';
 
   const topbarUser = document.getElementById('topbarUser');
   if(topbarUser) topbarUser.textContent = currentUser || '—';
+
+  document.getElementById('footerbarOuter').style.display = 'block';
+
+  FIXED_NAMES = await loadTeamFromServer();
+  NAME_COLORS = generateNameColors(FIXED_NAMES);
+  CONFETTI_COLORS = Object.values(NAME_COLORS);
+  selected = new Set(FIXED_NAMES);
 
   initLogSupport();
   loadState();
