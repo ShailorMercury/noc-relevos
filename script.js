@@ -127,13 +127,13 @@ async function fetchSharedHistory(){
   }
 }
 
-function sendToLogServer(fecha, nombre, turno, giradoPor){
+function sendToLogServer(fecha, nombre, turno){
   if(!LOG_ENDPOINT || LOG_ENDPOINT.indexOf('PEGA_AQUI') !== -1) return;
   fetch(LOG_ENDPOINT, {
     method: 'POST',
     mode: 'no-cors',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({fecha, nombre, turno, giradoPor})
+    body: JSON.stringify({fecha, nombre, turno, usuario: currentUsuarioFull, token: currentToken})
   }).catch(() => {});
 }
 
@@ -320,7 +320,7 @@ function spin(){
     renderHistory();
     renderSummary();
     saveState();
-    sendToLogServer(fecha, winner, turno, currentUser);
+    sendToLogServer(fecha, winner, turno);
     resultLabel.textContent = 'da el relevo';
     resultLabel.classList.remove('spinning-label');
     resultName.textContent = winner;
@@ -445,6 +445,8 @@ if(initialActiveTab) moveTabIndicator(initialActiveTab);
 const ADMIN_USER = 'sandra';
 
 let currentUser = '';
+let currentUsuarioFull = '';
+let currentToken = '';
 
 function startApp(){
   document.getElementById('loginOverlay').style.display = 'none';
@@ -453,8 +455,9 @@ function startApp(){
     const raw = localStorage.getItem(LOGIN_KEY);
     if(raw){
       const data = JSON.parse(raw);
-      const usuario = (data.usuario || '').split('@')[0];
-      currentUser = usuario || data.nombre || '';
+      currentUsuarioFull = data.usuario || '';
+      currentUser = currentUsuarioFull.split('@')[0] || data.nombre || '';
+      currentToken = data.token || '';
     }
   }catch(err){}
 
@@ -505,7 +508,7 @@ loginForm.addEventListener('submit', async (ev) => {
     });
     const data = await res.json();
     if(data.status === 'ok'){
-      localStorage.setItem(LOGIN_KEY, JSON.stringify({usuario, nombre: data.nombre}));
+      localStorage.setItem(LOGIN_KEY, JSON.stringify({usuario, nombre: data.nombre, token: data.token}));
       startApp();
     } else {
       loginError.textContent = data.message || 'Usuario o contraseña incorrectos';
