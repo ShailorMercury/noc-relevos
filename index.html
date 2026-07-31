@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ruleta de Relevos // NOC</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Ruleta de relevos</h1>
+  <p class="subtitle">Marca quién está en turno hoy y que la ruleta decida quién da el relevo.</p>
+
+  <div class="grid">
+
+    <div class="wheel-col">
+      <div class="wheel-stage">
+        <div class="wheel-core">
+          <div class="pointer"></div>
+          <div class="wheel-ring"></div>
+          <svg id="wheel" viewBox="0 0 300 300"></svg>
+          <div class="hub">
+            <div class="clock" id="clock">00:00</div>
+            <div class="lbl">LOCAL</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="spin-btn" id="spinBtn">GIRAR</button>
+
+      <div class="result-wrap">
+        <img src="pingu.gif" class="pingu" alt="Pingu vigilando el relevo">
+        <div class="result-card" id="resultCard">
+          <div class="result-label" id="resultLabel">da el relevo</div>
+          <div class="result-name" id="resultName">—</div>
+          <div class="result-meta" id="resultMeta">esperando giro...</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Equipo <span id="teamCount">11 en turno</span></h2>
+        <div class="person-grid" id="namesGrid"></div>
+        <p class="footnote" id="selectWarning" style="display:none;color:var(--red);">Selecciona al menos 2 personas para poder girar.</p>
+      </div>
+
+      <div class="panel">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="resumen">Resumen</button>
+          <button class="tab-btn" data-tab="historial">Historial</button>
+          <span class="tab-indicator" id="tabIndicator"></span>
+        </div>
+
+        <div class="tab-panel active" id="tabResumen">
+          <div id="summaryBars"></div>
+        </div>
+
+        <div class="tab-panel" id="tabHistorial">
+          <div class="hist-wrap">
+            <table>
+              <thead><tr><th style="width:32%">Fecha</th><th style="width:20%">Turno</th><th>Persona</th></tr></thead>
+              <tbody id="histBody">
+                <tr class="empty-row"><td colspan="3">Aún no hay giros registrados</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="actions" style="margin-top:16px;">
+            <button class="btn-sm" id="exportBtn">↓ exportar copia</button>
+            <button class="btn-sm" id="importBtn">↑ importar copia</button>
+            <button class="btn-sm" id="resetBtn">⟲ borrar historial</button>
+            <input type="file" id="fileInput" accept="application/json">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
