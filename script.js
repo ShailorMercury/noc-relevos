@@ -22,7 +22,6 @@ const TURNO_COLORS = {
 };
 const R_OUTER = 145;
 const R_LABEL = 95;
-let bryanFirstSpinUsed = false;
 
 let audioCtx = null;
 function getAudioCtx(){
@@ -127,16 +126,6 @@ async function fetchSharedHistory(){
   }
 }
 
-function sendToLogServer(fecha, nombre, turno){
-  if(!LOG_ENDPOINT || LOG_ENDPOINT.indexOf('PEGA_AQUI') !== -1) return;
-  fetch(LOG_ENDPOINT, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({fecha, nombre, turno, usuario: currentUsuarioFull, token: currentToken})
-  }).catch(() => {});
-}
-
 // initLogSupport() se llama ahora dentro de startApp(), tras el login
 
 function activeNames(){
@@ -179,7 +168,6 @@ function buildNameInputs(){
     btn.addEventListener('click', () => {
       if(selected.has(n)) selected.delete(n); else selected.add(n);
       btn.className = 'person-btn ' + (selected.has(n) ? 'active' : 'inactive');
-      bryanFirstSpinUsed = false;
       updateTeamState();
       renderWheel();
       saveState();
@@ -244,15 +232,6 @@ function tickClock(){
 setInterval(tickClock, 1000);
 tickClock();
 
-function pickTarget(names){
-  const bryanIdx = names.indexOf('Bryan');
-  if(bryanIdx !== -1 && !bryanFirstSpinUsed){
-    bryanFirstSpinUsed = true;
-    return bryanIdx;
-  }
-  return Math.floor(Math.random()*names.length);
-}
-
 const CONFETTI_COLORS = Object.values(NAME_COLORS);
 
 function fireConfetti(container){
@@ -278,14 +257,7 @@ function fireConfetti(container){
   }
 }
 
-function getTurno(date){
-  const h = date.getHours();
-  if(h >= 6 && h < 14) return 'Mañana';
-  if(h >= 14 && h < 22) return 'Tarde';
-  return 'Noche';
-}
-
-function spin(){
+async function spin(){
   const names = activeNames();
   if(spinning || names.length < 2) return;
   spinning = true;
@@ -293,11 +265,33 @@ function spin(){
   resultLabel.textContent = 'da el relevo';
   resultLabel.classList.remove('spinning-label');
   resultName.innerHTML = '<span class="dot-loader"><span></span><span></span><span></span></span>';
-  resultMeta.textContent = '';
+  resultMeta.textContent = 'conectando...';
 
+  let serverResult;
+  try{
+    const res = await fetch(LOG_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({action: 'spin', usuario: currentUsuarioFull, token: currentToken, activeNames: names})
+    });
+    serverResult = await res.json();
+  }catch(err){
+    serverResult = {status: 'error', message: 'No se pudo conectar con el servidor'};
+  }
+
+  if(serverResult.status !== 'ok'){
+    resultName.textContent = '⚠️';
+    resultName.style.color = 'var(--red)';
+    resultMeta.textContent = serverResult.message || 'Error al girar';
+    spinning = false;
+    updateTeamState();
+    return;
+  }
+
+  const winner = serverResult.nombre;
   const n = names.length;
   const seg = 360/n;
-  const targetIndex = pickTarget(names);
+  const targetIndex = Math.max(0, names.indexOf(winner));
   const segCenter = targetIndex*seg + seg/2;
   const jitter = (Math.random()-0.5) * (seg*0.6);
 
@@ -312,15 +306,12 @@ function spin(){
   scheduleSpinTicks(totalDelta, seg, 5500);
 
   setTimeout(() => {
-    const winner = names[targetIndex];
-    const now = new Date();
-    const fecha = now.toLocaleDateString('es-ES') + ' ' + now.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    const turno = getTurno(now);
+    const fecha = serverResult.fecha;
+    const turno = serverResult.turno;
     history.unshift({fecha, nombre: winner, turno, giradoPor: currentUser});
     renderHistory();
     renderSummary();
     saveState();
-    sendToLogServer(fecha, winner, turno);
     resultLabel.textContent = 'da el relevo';
     resultLabel.classList.remove('spinning-label');
     resultName.textContent = winner;
@@ -387,7 +378,6 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
       const data = JSON.parse(ev.target.result);
       if(Array.isArray(data.selected)){
         selected = new Set(data.selected.filter(n => FIXED_NAMES.includes(n)));
-        bryanFirstSpinUsed = false;
       }
       if(Array.isArray(data.history)) history = data.history;
       buildNameInputs();
@@ -407,7 +397,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   if(!confirm('¿Seguro? Esto borra el historial guardado en este navegador.')) return;
   history = [];
   selected = new Set(FIXED_NAMES);
-  bryanFirstSpinUsed = false;
   buildNameInputs();
   renderWheel();
   renderHistory();
