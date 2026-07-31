@@ -103,7 +103,41 @@ const summaryBars = document.getElementById('summaryBars');
 const teamCount = document.getElementById('teamCount');
 const selectWarning = document.getElementById('selectWarning');
 
-let logServerUp = false;
+// 👇 Pega aquí la URL que copiaste al desplegar el Apps Script (termina en /exec)
+const LOG_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxh04qQdkC4AipzeAKTNdF0Gn8rDJZHuG7ihjZtggJJDIWgxUPbVw5Jdi22ErmrsbuuHg/exec';
+
+function initLogSupport(){
+  if(!LOG_ENDPOINT || LOG_ENDPOINT.indexOf('PEGA_AQUI') !== -1) return;
+  fetchSharedHistory();
+}
+
+async function fetchSharedHistory(){
+  try{
+    const res = await fetch(LOG_ENDPOINT);
+    if(!res.ok) return;
+    const rows = await res.json();
+    if(Array.isArray(rows) && rows.length > 0){
+      history = rows;
+      renderHistory();
+      renderSummary();
+      saveState();
+    }
+  }catch(err){
+    console.warn('No se pudo leer el historial compartido', err);
+  }
+}
+
+function sendToLogServer(fecha, nombre, turno){
+  if(!LOG_ENDPOINT || LOG_ENDPOINT.indexOf('PEGA_AQUI') !== -1) return;
+  fetch(LOG_ENDPOINT, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({fecha, nombre, turno})
+  }).catch(() => {});
+}
+
+initLogSupport();
 
 function activeNames(){
   return FIXED_NAMES.filter(n => selected.has(n));
@@ -201,32 +235,6 @@ function renderWheel(){
 
   wheel.innerHTML = svg;
 }
-
-function initLogSupport(){
-  checkLogServer();
-  setInterval(checkLogServer, 8000);
-}
-
-async function checkLogServer(){
-  try{
-    const res = await fetch('/ping', {mode:'cors'});
-    logServerUp = res.ok;
-  }catch(err){
-    logServerUp = false;
-  }
-}
-
-function sendToLogServer(fecha, nombre, turno){
-  if(!logServerUp) return;
-  fetch('/log', {
-    method: 'POST',
-    mode: 'cors',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({fecha, nombre, turno})
-  }).catch(() => {});
-}
-
-initLogSupport();
 
 function tickClock(){
   const now = new Date();
