@@ -442,6 +442,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 const initialActiveTab = document.querySelector('.tab-btn.active');
 if(initialActiveTab) moveTabIndicator(initialActiveTab);
 
+const ADMIN_USER = 'sandra';
+
 let currentUser = '';
 
 function startApp(){
@@ -451,9 +453,15 @@ function startApp(){
     const raw = localStorage.getItem(LOGIN_KEY);
     if(raw){
       const data = JSON.parse(raw);
-      currentUser = data.nombre || data.usuario || '';
+      const usuario = (data.usuario || '').split('@')[0];
+      currentUser = usuario || data.nombre || '';
     }
   }catch(err){}
+
+  const adminActions = document.getElementById('adminActions');
+  if(adminActions){
+    adminActions.style.display = (currentUser.toLowerCase() === ADMIN_USER) ? 'flex' : 'none';
+  }
   initLogSupport();
   loadState();
   buildNameInputs();
